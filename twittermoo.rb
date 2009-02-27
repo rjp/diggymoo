@@ -23,8 +23,8 @@ loop {
     twitter.timeline(:friends).each do |s|
 	    sha1 = SHA1.hexdigest(s.text + s.user.name)
 	    if already_seen[sha1].nil? then
-            output = "<#{s.user.screen_name}> #{s.text}"
-            puts "* #{output}"
+            ts = Time.parse(s.created_at)
+            output = "<#{s.user.screen_name}> #{s.text} (#{ts.strftime('%Y%m%d %H%M%S')})"
             if s.text =~ /^@(\w+)\s/ then
                 puts "? #{$1}"
                 if twitter.friends.include?($1) then
