@@ -20,7 +20,7 @@ twitter.timeline(:friends).each do |s|
 end
 
 loop {
-    twitter.timeline(:friends).each do |s|
+    twitter.timeline(:friends).reverse.each do |s|
 	    sha1 = SHA1.hexdigest(s.text + s.user.name)
 	    if already_seen[sha1].nil? then
             ts = Time.parse(s.created_at)
