@@ -39,7 +39,7 @@ loop {
             end
 #            already_seen[sha1] = "s"
 	    end
-#        sleep 20
+        sleep 20
     end
 
 # clean out our incoming spread queue to avoid problems
