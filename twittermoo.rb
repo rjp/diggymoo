@@ -20,8 +20,22 @@ twitter.timeline(:friends).each do |s|
     already_seen[sha1] = "s"
 end
 
+prev_time = Time.now - 3600
 puts "L entering main loop"
 loop {
+    puts "S #{Time.now}"
+    sleep 300
+
+    puts "T fetching direct messages since #{prev_time}"
+
+    twitter.direct_messages(:since => prev_time).each do |s|
+      puts "D #{s.id} #{s.text}"
+      xtime = Time.parse(s.created_at)
+      if xtime > prev_time then
+          prev_time = xtime # this is kinda lame
+      end
+    end
+
     puts "T fetching current timeline"
     twitter.timeline(:friends).reverse.each do |s|
 	    sha1 = SHA1.hexdigest(s.text + s.user.name)
