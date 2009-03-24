@@ -37,7 +37,34 @@ loop {
     end
 
     puts "T fetching current timeline"
-    twitter.timeline(:friends).reverse.each do |s|
+    tl = []
+    attempts = 5
+    loop do
+        begin
+            tl = twitter.timeline(:friends)
+            puts "Y timeline fetched successfully, #{tl.size} items"
+            sleep 5
+            break
+        rescue Timeout::Error, Twitter::CantConnect
+            puts "E $!"
+            attempts = attempts - 1
+            if attempts == 0 then
+                puts "too many failures, bailing for 120s"
+                sleep 120
+                attempts = 5
+            else
+                puts "transient failure, sleeping for 30s"
+                sleep 30
+            end
+        rescue
+            raise $!
+            sleep 10
+        end
+    end
+
+    puts "Y timeline fetched successfully, #{tl.size} items"
+
+    tl.reverse.each do |s|
 	    sha1 = SHA1.hexdigest(s.text + s.user.name)
         status = already_seen[sha1]
 	    if status.nil? then
@@ -77,6 +104,4 @@ loop {
 #        end
 #    end
 
-    puts "S #{Time.now}"
-    sleep 300
 }
