@@ -3,6 +3,7 @@ require 'twitter'
 require 'gdbm'
 require 'sha1'
 require 'spread.so'
+require 'chronic'
 
 # connect to the spreadery
 sp = Spread.new("4803", "twittermoo")
@@ -17,14 +18,16 @@ already_seen = GDBM.new('/data/rjp/db/mootwits.db')
 puts "B fetching current timeline and ignoring"
 twitter.timeline(:friends).each do |s|
     sha1 = SHA1.hexdigest(s.text + s.user.name)
-    already_seen[sha1] = "s"
+    xtime = Time.parse(s.created_at)
+    threshold = Chronic.parse('one hour ago')
+    if xtime < threshold then
+        already_seen[sha1] = "s"
+    end
 end
 
 prev_time = Time.now - 3600
 puts "L entering main loop"
 loop {
-    puts "S #{Time.now}"
-    sleep 300
 
     puts "T fetching direct messages since #{prev_time}"
 
@@ -75,12 +78,20 @@ loop {
                 puts "? #{$1}"
                 if 1 then # twitter.friends.include?($1) then
     	            puts "+ #{output}"
+                if output.length > 250 then
+                    $stderr.puts "#{output[0..250]}..."
+                    exit;
+                end
                     sp.multicast(output, 'bot_say', Spread::RELIABLE_MESS)
                 else
                     puts "- #{output}"
                 end
             else
     	        puts "+ #{output}"
+                if output.length > 250 then
+                    $stderr.puts "#{output[0..250]}..."
+                    exit;
+                end
                 sp.multicast(output, 'bot_say', Spread::RELIABLE_MESS)
             end
             already_seen[sha1] = "p"
@@ -92,6 +103,9 @@ loop {
             already_seen[sha1]='p'
 	    end
     end
+
+    puts "S #{Time.now}"
+    sleep 300
 
 # clean out our incoming spread queue to avoid problems
 #    messages = 1
