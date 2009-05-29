@@ -5,7 +5,7 @@ require 'sha1'
 require 'optparse'
 require 'socket'
 
-options = {
+$options = {
     :host => 'localhost',
     :port => nil,
     :dbfile => ENV['HOME'] + '/.twittermoo.db',
@@ -14,46 +14,55 @@ options = {
 }
 
 OptionParser.new do |opts|
-  opts.banner = "Usage: twittermoo.rb [options]"
+  opts.banner = "Usage: twittermoo.rb [-v] [-p port] [-h host] [-d dbfile] [-c config]"
 
   opts.on("-v", "--[no-]verbose", "Run verbosely") do |v|
-    options[:verbose] = v
+    puts "verbose is set to #{v}"
+    $options[:verbose] = v
   end
 
-  opts.on("-p", "--port", Integer, "irccat port") do |p|
-    options[:port] = p
+  opts.on("-p", "--port N", Integer, "irccat port") do |p|
+    puts "port is set to #{p}"
+    $options[:port] = p
   end
 
-  opts.on("-d", "--dbfile", String, "dbfile") do |p|
-    options[:dbfile] = p
+  opts.on("-d", "--dbfile DBFILE", String, "dbfile") do |p|
+    puts "dbfile is set to #{p}"
+    $options[:dbfile] = p
   end
 
-  opts.on("-c", "--config", String, "config file") do |p|
-    options[:config] = p
+  opts.on("-h", "--host HOST", String, "host") do |p|
+    puts "host is set to #{p}"
+    $options[:host] = p
+  end
+
+  opts.on("-c", "--config CONFIG", String, "config file") do |p|
+    puts "config is set to #{p}"
+    $options[:config] = p
   end
 end.parse!
 
-p options
+p $options
 p ARGV
 
-unless options[:port].nil? then
-    $socket = TCPSocket.new(options[:host], options[:port])
+unless $options[:port].nil? then
+    $socket = TCPSocket.new($options[:host], $options[:port])
 end
 
 def send_message(x)
-    if options[:port].nil? then
+    if $options[:port].nil? then
         puts "! #{x}"
     else
         $socket.puts(x)
     end
 end
 
-config = YAML::load(open(options[:config]))
+config = YAML::load(open($options[:config]))
  
 httpauth = Twitter::HTTPAuth.new(config['email'], config['password'])
 twitter = Twitter::Base.new(httpauth)
 
-already_seen = GDBM.new(options[:dbfile])
+already_seen = GDBM.new($options[:dbfile])
 
 puts "B fetching current timeline and ignoring"
 twitter.friends_timeline().each do |s|
