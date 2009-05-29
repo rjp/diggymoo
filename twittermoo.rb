@@ -3,17 +3,58 @@ require 'twitter'
 require 'gdbm'
 require 'sha1'
 require 'chronic'
+require 'optparse'
+require 'socket'
 
-def send_message(x)
-    puts "! #{x}"
+options = {
+    :host => 'localhost',
+    :port => nil,
+    :dbfile => ENV['HOME'] + '/.twittermoo.db',
+    :config => ENV['HOME'] + '/.twittermoo',
+    :verbose => nil
+}
+
+OptionParser.new do |opts|
+  opts.banner = "Usage: twittermoo.rb [options]"
+
+  opts.on("-v", "--[no-]verbose", "Run verbosely") do |v|
+    options[:verbose] = v
+  end
+
+  opts.on("-p", "--port", Integer, "irccat port") do |p|
+    options[:port] = p
+  end
+
+  opts.on("-d", "--dbfile", String, "dbfile") do |p|
+    options[:dbfile] = p
+  end
+
+  opts.on("-c", "--config", String, "config file") do |p|
+    options[:config] = p
+  end
+end.parse!
+
+p options
+p ARGV
+
+unless options[:port].nil? then
+    $socket = TCPSocket.new(options[:host], options[:port])
 end
 
-config = YAML::load(open(ENV['HOME'] + '/.twittermoo'))
+def send_message(x)
+    if options[:port].nil? then
+        puts "! #{x}"
+    else
+        $socket.puts(x)
+    end
+end
+
+config = YAML::load(open(options[:config]))
  
 httpauth = Twitter::HTTPAuth.new(config['email'], config['password'])
 twitter = Twitter::Base.new(httpauth)
 
-already_seen = GDBM.new('/data/rjp/db/mootwits.db')
+already_seen = GDBM.new(options[:dbfile])
 
 puts "B fetching current timeline and ignoring"
 twitter.friends_timeline().each do |s|
