@@ -11,12 +11,13 @@ sp.join('sport_say')
 
 config = YAML::load(open(ENV['HOME'] + '/.twittermoo'))
  
-twitter = Twitter::Base.new(config['email'], config['password'])
+httpauth = Twitter::HTTPAuth.new(config['email'], config['password'])
+twitter = Twitter::Base.new(httpauth)
 
 already_seen = GDBM.new('/data/rjp/db/mootwits.db')
 
 puts "B fetching current timeline and ignoring"
-twitter.timeline(:friends).each do |s|
+twitter.friends_timeline().each do |s|
     sha1 = SHA1.hexdigest(s.text + s.user.name)
     xtime = Time.parse(s.created_at)
     threshold = Chronic.parse('one hour ago')
@@ -31,7 +32,7 @@ loop {
 
     puts "T fetching direct messages since #{prev_time}"
 
-    twitter.direct_messages(:since => prev_time).each do |s|
+    twitter.direct_messages().each do |s|
       puts "D #{s.id} #{s.text}"
       xtime = Time.parse(s.created_at)
       if xtime > prev_time then
@@ -44,7 +45,7 @@ loop {
     attempts = 5
     loop do
         begin
-            tl = twitter.timeline(:friends)
+            tl = twitter.friends_timeline()
             puts "Y timeline fetched successfully, #{tl.size} items"
             sleep 5
             break
