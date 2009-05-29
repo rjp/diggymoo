@@ -2,7 +2,6 @@ require 'rubygems'
 require 'twitter'
 require 'gdbm'
 require 'sha1'
-require 'chronic'
 require 'optparse'
 require 'socket'
 
@@ -60,13 +59,13 @@ puts "B fetching current timeline and ignoring"
 twitter.friends_timeline().each do |s|
     sha1 = SHA1.hexdigest(s.text + s.user.name)
     xtime = Time.parse(s.created_at)
-    threshold = Chronic.parse('one hour ago')
+    threshold = Time.now - 3600
     if xtime < threshold then
         already_seen[sha1] = "s"
     end
 end
 
-prev_time = Time.now - 3600
+prev_time = threshold
 puts "L entering main loop"
 loop {
 
