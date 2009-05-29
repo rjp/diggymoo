@@ -17,27 +17,22 @@ OptionParser.new do |opts|
   opts.banner = "Usage: twittermoo.rb [-v] [-p port] [-h host] [-d dbfile] [-c config]"
 
   opts.on("-v", "--[no-]verbose", "Run verbosely") do |v|
-    puts "verbose is set to #{v}"
     $options[:verbose] = v
   end
 
   opts.on("-p", "--port N", Integer, "irccat port") do |p|
-    puts "port is set to #{p}"
     $options[:port] = p
   end
 
   opts.on("-d", "--dbfile DBFILE", String, "dbfile") do |p|
-    puts "dbfile is set to #{p}"
     $options[:dbfile] = p
   end
 
   opts.on("-h", "--host HOST", String, "host") do |p|
-    puts "host is set to #{p}"
     $options[:host] = p
   end
 
   opts.on("-c", "--config CONFIG", String, "config file") do |p|
-    puts "config is set to #{p}"
     $options[:config] = p
   end
 end.parse!
