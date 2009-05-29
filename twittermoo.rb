@@ -74,7 +74,7 @@ twitter.friends_timeline().each do |s|
     end
 end
 
-prev_time = threshold
+prev_time = Time.now - 3600
 puts "L entering main loop"
 loop {
 
