@@ -52,6 +52,12 @@ def send_message(x)
     end
 end
 
+def log(x)
+    if $options[:verbose] then
+        puts *x
+    end
+end
+
 config = YAML::load(open($options[:config]))
  
 httpauth = Twitter::HTTPAuth.new(config['email'], config['password'])
@@ -59,7 +65,7 @@ twitter = Twitter::Base.new(httpauth)
 
 already_seen = GDBM.new($options[:dbfile])
 
-puts "B fetching current timeline and ignoring"
+log "B fetching current timeline and ignoring"
 twitter.friends_timeline().each do |s|
     sha1 = SHA1.hexdigest(s.text + s.user.name)
     xtime = Time.parse(s.created_at)
@@ -70,37 +76,37 @@ twitter.friends_timeline().each do |s|
 end
 
 prev_time = Time.now - 3600
-puts "L entering main loop"
+log "L entering main loop"
 loop {
 
-    puts "T fetching direct messages since #{prev_time}"
+    log "T fetching direct messages since #{prev_time}"
 
     twitter.direct_messages().each do |s|
-      puts "D #{s.id} #{s.text}"
+      log "D #{s.id} #{s.text}"
       xtime = Time.parse(s.created_at)
       if xtime > prev_time then
           prev_time = xtime # this is kinda lame
       end
     end
 
-    puts "T fetching current timeline"
+    log "T fetching current timeline"
     tl = []
     attempts = 5
     loop do
         begin
             tl = twitter.friends_timeline()
-            puts "Y timeline fetched successfully, #{tl.size} items"
+            log "Y timeline fetched successfully, #{tl.size} items"
             sleep 5
             break
         rescue Timeout::Error, Twitter::CantConnect
-            puts "E $!"
+            log "E $!"
             attempts = attempts - 1
             if attempts == 0 then
-                puts "too many failures, bailing for 120s"
+                log "too many failures, bailing for 120s"
                 sleep 120
                 attempts = 5
             else
-                puts "transient failure, sleeping for 30s"
+                log "transient failure, sleeping for 30s"
                 sleep 30
             end
         rescue
@@ -109,29 +115,29 @@ loop {
         end
     end
 
-    puts "Y timeline fetched successfully, #{tl.size} items"
+    log "Y timeline fetched successfully, #{tl.size} items"
 
     tl.reverse.each do |s|
-	    sha1 = SHA1.hexdigest(s.text + s.user.name)
+        sha1 = SHA1.hexdigest(s.text + s.user.name)
         status = already_seen[sha1]
-	    if status.nil? then
-            puts "N +/#{sha1} #{s.user.name} #{s.text[0..6]}..."
+        if status.nil? then
+            log "N +/#{sha1} #{s.user.name} #{s.text[0..6]}..."
             ts = Time.parse(s.created_at)
             output = "<#{s.user.screen_name}> #{s.text} (#{ts.strftime('%Y%m%d %H%M%S')})"
             if s.text =~ /^@(\w+)\s/ then
-                puts "? #{$1}"
+                log "? #{$1}"
                 if 1 then # twitter.friends.include?($1) then
-    	            puts "+ #{output}"
-                if output.length > 250 then
-                    $stderr.puts "#{output[0..250]}..."
-                    exit;
-                end
+                    log "+ #{output}"
+	                if output.length > 250 then
+	                    $stderr.puts "#{output[0..250]}..."
+	                    exit;
+	                end
                     send_message(output)
                 else
-                    puts "- #{output}"
+                    log "- #{output}"
                 end
             else
-    	        puts "+ #{output}"
+                log "+ #{output}"
                 if output.length > 250 then
                     $stderr.puts "#{output[0..250]}..."
                     exit;
@@ -142,14 +148,12 @@ loop {
             sleep 20
         else
             if status != 'p' then
-                puts "O #{status}/#{sha1} #{s.user.name} #{s.text[0..6]}..."
+                log "O #{status}/#{sha1} #{s.user.name} #{s.text[0..6]}..."
             end
             already_seen[sha1]='p'
-	    end
+        end
     end
 
-    puts "S #{Time.now}"
+    log "S #{Time.now}"
     sleep 300
 }
-
-
