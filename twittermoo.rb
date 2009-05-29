@@ -4,6 +4,9 @@ require 'gdbm'
 require 'sha1'
 require 'chronic'
 
+def send_message(x)
+    puts "! #{x}"
+end
 
 config = YAML::load(open(ENV['HOME'] + '/.twittermoo'))
  
