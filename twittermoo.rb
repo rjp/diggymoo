@@ -2,12 +2,8 @@ require 'rubygems'
 require 'twitter'
 require 'gdbm'
 require 'sha1'
-require 'spread.so'
 require 'chronic'
 
-# connect to the spreadery
-sp = Spread.new("4803", "twittermoo")
-sp.join('sport_say')
 
 config = YAML::load(open(ENV['HOME'] + '/.twittermoo'))
  
@@ -83,7 +79,7 @@ loop {
                     $stderr.puts "#{output[0..250]}..."
                     exit;
                 end
-                    sp.multicast(output, 'bot_say', Spread::RELIABLE_MESS)
+                    send_message(output)
                 else
                     puts "- #{output}"
                 end
@@ -93,7 +89,7 @@ loop {
                     $stderr.puts "#{output[0..250]}..."
                     exit;
                 end
-                sp.multicast(output, 'bot_say', Spread::RELIABLE_MESS)
+                send_message(output)
             end
             already_seen[sha1] = "p"
             sleep 20
@@ -107,16 +103,6 @@ loop {
 
     puts "S #{Time.now}"
     sleep 300
-
-# clean out our incoming spread queue to avoid problems
-#    messages = 1
-#    while messages > 0 do
-#        messages = sp.poll
-#        if messages > 0 then
-#            junk = sp.receive
-#        else
-#            break
-#        end
-#    end
-
 }
+
+
