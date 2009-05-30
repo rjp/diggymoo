@@ -40,15 +40,16 @@ end.parse!
 p $options
 p ARGV
 
-unless $options[:port].nil? then
-    $socket = TCPSocket.new($options[:host], $options[:port])
-end
-
 def send_message(x)
     if $options[:port].nil? then
         puts "! #{x}"
     else
-        $socket.puts(x)
+        begin
+            # irc_cat doesn't seem to like persistent connections
+            $socket = TCPSocket.new($options[:host], $options[:port])
+            $socket.puts(x)
+            $socket.close
+        end
     end
 end
 
