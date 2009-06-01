@@ -108,7 +108,6 @@ loop {
         begin
             tl = twitter.friends_timeline()
             log "Y timeline fetched successfully, #{tl.size} items"
-            sleep 5
             break
         rescue Timeout::Error, Twitter::CantConnect
             log "E $!"
