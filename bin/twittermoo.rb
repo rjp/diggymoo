@@ -68,14 +68,16 @@ twitter = Twitter::Base.new(httpauth)
 
 already_seen = GDBM.new($options[:dbfile])
 
-log "B fetching current timeline and ignoring"
-twitter.friends_timeline().each do |s|
-    sha1 = SHA1.hexdigest(s.text + s.user.name)
-    xtime = Time.parse(s.created_at)
-    threshold = Time.now - 3600
-    if xtime < threshold then
-        already_seen[sha1] = "s"
-    end
+if $options[:once].nil? then
+	log "B fetching current timeline and ignoring"
+	twitter.friends_timeline().each do |s|
+	    sha1 = SHA1.hexdigest(s.text + s.user.name)
+	    xtime = Time.parse(s.created_at)
+	    threshold = Time.now - 3600
+	    if xtime < threshold then
+	        already_seen[sha1] = "s"
+	    end
+	end
 end
 
 prev_time = Time.now - 3600
@@ -157,6 +159,10 @@ loop {
         end
     end
 
-    log "S #{Time.now}"
-    sleep 300
+    if $options[:once].nil? then
+        log "S #{Time.now}"
+        sleep 300
+    else
+        break
+    end
 }
