@@ -12,5 +12,6 @@ spec = Gem::Specification.new do |s|
   s.require_path = "lib"
   s.test_files = []
   s.has_rdoc = false
+  s.add_dependency('twitter', '>= 0.5')
 end
 
