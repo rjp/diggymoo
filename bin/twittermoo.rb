@@ -55,6 +55,7 @@ def send_message(x)
     end
 end
 
+# TODO move this to something like log4r if they have it
 def log(x)
     if $options[:verbose] then
         puts *x
@@ -62,7 +63,8 @@ def log(x)
 end
 
 config = YAML::load(open($options[:config]))
- 
+
+# TODO add an option for OAuth
 httpauth = Twitter::HTTPAuth.new(config['email'], config['password'])
 twitter = Twitter::Base.new(httpauth)
 
