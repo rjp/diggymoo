@@ -10,14 +10,19 @@ $options = {
     :port => nil,
     :dbfile => ENV['HOME'] + '/.twittermoo.db',
     :config => ENV['HOME'] + '/.twittermoo',
-    :verbose => nil
+    :verbose => nil,
+    :once => nil
 }
 
 OptionParser.new do |opts|
-  opts.banner = "Usage: twittermoo.rb [-v] [-p port] [-h host] [-d dbfile] [-c config]"
+  opts.banner = "Usage: twittermoo.rb [-v] [-p port] [-h host] [-d dbfile] [-c config] [-o]"
 
   opts.on("-v", "--[no-]verbose", "Run verbosely") do |v|
     $options[:verbose] = v
+  end
+
+  opts.on("-o", "--once", "Run once and quit") do |p|
+    $options[:once] = p
   end
 
   opts.on("-p", "--port N", Integer, "irccat port") do |p|
