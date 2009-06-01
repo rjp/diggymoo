@@ -11,11 +11,12 @@ $options = {
     :dbfile => ENV['HOME'] + '/.twittermoo.db',
     :config => ENV['HOME'] + '/.twittermoo',
     :verbose => nil,
-    :once => nil
+    :once => nil,
+    :wait => 20
 }
 
 OptionParser.new do |opts|
-  opts.banner = "Usage: twittermoo.rb [-v] [-p port] [-h host] [-d dbfile] [-c config] [-o]"
+  opts.banner = "Usage: twittermoo.rb [-v] [-p port] [-h host] [-d dbfile] [-c config] [-o] [-w N]"
 
   opts.on("-v", "--[no-]verbose", "Run verbosely") do |v|
     $options[:verbose] = v
@@ -23,6 +24,10 @@ OptionParser.new do |opts|
 
   opts.on("-o", "--once", "Run once and quit") do |p|
     $options[:once] = p
+  end
+
+  opts.on("-w", "--wait N", Integer, "Delay between sending messages") do |p|
+    $options[:wait] = p
   end
 
   opts.on("-p", "--port N", Integer, "irccat port") do |p|
@@ -152,7 +157,7 @@ loop {
                 send_message(output)
             end
             already_seen[sha1] = "p"
-            sleep 20
+            sleep $options[:wait]
         else
             if status != 'p' then
                 log "O #{status}/#{sha1} #{s.user.name} #{s.text[0..6]}..."
