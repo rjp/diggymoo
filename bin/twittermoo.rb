@@ -42,9 +42,6 @@ OptionParser.new do |opts|
   end
 end.parse!
 
-p $options
-p ARGV
-
 def send_message(x)
     if $options[:port].nil? then
         puts "! #{x}"
