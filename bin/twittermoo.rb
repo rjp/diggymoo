@@ -82,7 +82,7 @@ config = YAML::load(open($options[:config]))
 # allow settings of options from the config file
 unless config['options'].nil? then
     options.merge!(config['options'])
-}
+end
 
 # TODO add an option for OAuth
 httpauth = Twitter::HTTPAuth.new(config['email'], config['password'])
