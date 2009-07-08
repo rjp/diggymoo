@@ -12,11 +12,12 @@ $options = {
     :config => ENV['HOME'] + '/.twittermoo',
     :verbose => nil,
     :once => nil,
-    :wait => 20
+    :wait => 20,
+    :period => 3600
 }
 
 OptionParser.new do |opts|
-  opts.banner = "Usage: twittermoo.rb [-v] [-p port] [-h host] [-d dbfile] [-c config] [-o] [-w N]"
+  opts.banner = "Usage: twittermoo.rb [-v] [-p port] [-h host] [-d dbfile] [-c config] [-o] [-w N] [-p N]"
 
   opts.on("-v", "--[no-]verbose", "Run verbosely") do |v|
     $options[:verbose] = v
@@ -26,8 +27,12 @@ OptionParser.new do |opts|
     $options[:once] = p
   end
 
-  opts.on("-w", "--wait N", Integer, "Delay between sending messages") do |p|
+  opts.on("-w", "--wait N", Integer, "Delay between sending messages (seconds)") do |p|
     $options[:wait] = p
+  end
+
+  opts.on("-p", "--period N", Integer, "Time period to check for new messages (seconds)") do |p|
+    $options[:period] = p
   end
 
   opts.on("-p", "--port N", Integer, "irccat port") do |p|
@@ -80,14 +85,14 @@ if $options[:once].nil? then
 	twitter.friends_timeline().each do |s|
 	    sha1 = SHA1.hexdigest(s.text + s.user.name)
 	    xtime = Time.parse(s.created_at)
-	    threshold = Time.now - 3600
+	    threshold = Time.now - $options[:period]
 	    if xtime < threshold then
 	        already_seen[sha1] = "s"
 	    end
 	end
 end
 
-prev_time = Time.now - 3600
+prev_time = Time.now - $options[:period]
 log "L entering main loop"
 loop {
 
