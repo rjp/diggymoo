@@ -1,6 +1,6 @@
 spec = Gem::Specification.new do |s| 
   s.name = "twittermoo"
-  s.version = "0.0.1"
+  s.version = "0.0.2"
   s.author = "Rob Partington"
   s.email = "zimpenfish@gmail.com"
   s.homepage = "http://rjp.github.com/twittermoo"
