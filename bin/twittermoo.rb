@@ -13,11 +13,12 @@ $options = {
     :verbose => nil,
     :once => nil,
     :wait => 20,
-    :period => 3600
+    :period => 3600,
+    :every => 300
 }
 
 OptionParser.new do |opts|
-  opts.banner = "Usage: twittermoo.rb [-v] [-p port] [-h host] [-d dbfile] [-c config] [-o] [-w N] [-p N]"
+  opts.banner = "Usage: twittermoo.rb [-v] [-p port] [-h host] [-d dbfile] [-c config] [-o] [-w N] [-p N] [-e N]"
 
   opts.on("-v", "--[no-]verbose", "Run verbosely") do |v|
     $options[:verbose] = v
@@ -33,6 +34,10 @@ OptionParser.new do |opts|
 
   opts.on("-p", "--period N", Integer, "Time period to check for new messages (seconds)") do |p|
     $options[:period] = p
+  end
+
+  opts.on("-e", "--every N", Integer, "Time period to sleep between checks (seconds, 300+)") do |p|
+    $options[:every] = p
   end
 
   opts.on("-p", "--port N", Integer, "irccat port") do |p|
@@ -177,7 +182,7 @@ loop {
 
     if $options[:once].nil? then
         log "S #{Time.now}"
-        sleep 300
+        sleep $options[:every]
     else
         break
     end
