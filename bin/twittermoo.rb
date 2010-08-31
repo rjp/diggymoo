@@ -5,6 +5,9 @@ require 'sha1'
 require 'optparse'
 require 'socket'
 
+# fix for ruby's utterly braindead timeout handling
+# http://jerith.livejournal.com/40063.html
+
 $options = {
     :host => 'localhost',
     :port => nil,
@@ -77,45 +80,8 @@ def log(x)
     end
 end
 
-config = YAML::load(open($options[:config]))
-
-# allow settings of options from the config file
-unless config['options'].nil? then
-    options.merge!(config['options'])
-end
-
-# TODO add an option for OAuth
-httpauth = Twitter::HTTPAuth.new(config['email'], config['password'])
-twitter = Twitter::Base.new(httpauth)
-
-already_seen = GDBM.new($options[:dbfile])
-
-if $options[:once].nil? then
-	log "B fetching current timeline and ignoring"
-	twitter.friends_timeline().each do |s|
-	    sha1 = SHA1.hexdigest(s.text + s.user.name)
-	    xtime = Time.parse(s.created_at)
-	    threshold = Time.now - $options[:period]
-	    if xtime < threshold then
-	        already_seen[sha1] = "s"
-	    end
-	end
-end
-
-prev_time = Time.now - $options[:period]
-log "L entering main loop"
-loop {
-
-    log "T fetching direct messages since #{prev_time}"
-
-    twitter.direct_messages().each do |s|
-      log "D #{s.id} #{s.text}"
-      xtime = Time.parse(s.created_at)
-      if xtime > prev_time then
-          prev_time = xtime # this is kinda lame
-      end
-    end
-
+# this is very lame
+def fetch_timeline(twitter)
     log "T fetching current timeline"
     tl = []
     attempts = 5
@@ -123,8 +89,8 @@ loop {
         begin
             tl = twitter.friends_timeline()
             log "Y timeline fetched successfully, #{tl.size} items"
-            break
-        rescue Timeout::Error, Twitter::CantConnect
+            return tl
+        rescue Timeout::Error
             log "E $!"
             attempts = attempts - 1
             if attempts == 0 then
@@ -140,7 +106,60 @@ loop {
             sleep 10
         end
     end
+end
 
+config = YAML::load(open($options[:config]))
+
+# allow settings of options from the config file
+unless config['options'].nil? then
+    options.merge!(config['options'])
+end
+
+# TODO add an option for OAuth
+httpauth = Twitter::HTTPAuth.new(config['email'], config['password'])
+twitter = Twitter::Base.new(httpauth)
+
+already_seen = GDBM.new($options[:dbfile])
+
+if $options[:once].nil? then
+	log "B fetching current timeline and ignoring"
+    tl = fetch_timeline(twitter)
+    log "Y timeline fetched successfully, #{tl.size} items"
+	tl.each do |s|
+	    sha1 = SHA1.hexdigest(s.text + s.user.name)
+	    xtime = Time.parse(s.created_at)
+	    threshold = Time.now - $options[:period]
+	    if xtime < threshold then
+	        already_seen[sha1] = "s"
+	    end
+    end
+end
+
+prev_time = Time.now - $options[:period]
+log "L entering main loop"
+loop {
+
+    log "T fetching direct messages since #{prev_time}"
+
+    begin
+	    twitter.direct_messages().each do |s|
+	      log "D #{s.id} #{s.text}"
+	      xtime = Time.parse(s.created_at)
+	      if xtime > prev_time then
+	          prev_time = xtime # this is kinda lame
+	      end
+	    end
+    rescue Timeout::Error => e
+        puts "timeout error #{e}"
+        sleep 15
+        retry
+    rescue => e
+        puts "something went wrong #{e}"
+        sleep 15
+        retry
+    end
+
+    tl = fetch_timeline(twitter)
     log "Y timeline fetched successfully, #{tl.size} items"
 
     tl.reverse.each do |s|
