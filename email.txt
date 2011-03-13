@@ -1,0 +1,46 @@
+To: zimpenfish@gmail.com
+Subject: Twips
+Content-Type: multipart/alternative; boundary=#{boundary}
+
+~ "\n\n"
+:plain
+  --#{boundary}
+  Content-Type: text/plain; charset=UTF-8
+  
+  #{posts.length} new twips
+  --#{boundary}
+  Content-Type: text/html; charset=UTF-8
+
+!!! default
+%html
+  %head
+    %title #{posts.length} new twips
+  %body
+    %table{:style=>"width:85%"}
+      %tr
+        - old_folder = nil
+        - old_subject = nil
+        %td
+        - posts.each_with_index do |s, ix|
+          %p{:style=>"width:100%;padding:6pt 1em 6pt 1em;background:#888;color:#000;font-weight:bold"}
+            %span{:style=>"font-size:75%"}
+              - if (s.protected == true)
+                SECRET&bull;
+              #{s.created_at}
+              &bull;
+              #{s.source}
+              &bull;
+              #{s.user.name} (#{s.user.screen_name})
+              - if (s.in_reply_to_screen_name != nil)
+                &raquo; #{s.in_reply_to_screen_name}
+            %br
+            %span{:style=>"padding:18pt"}
+              &nbsp;
+            %br
+            %span{:style=>"font-family:monospace;max-width:80ex"}
+              #{s.text}
+            %hr
+    %br
+    %small UA Notify Bot says hello!
+:plain
+  --#{boundary}--
