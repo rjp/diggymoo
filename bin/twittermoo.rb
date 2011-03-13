@@ -4,6 +4,7 @@ require 'gdbm'
 require 'sha1'
 require 'optparse'
 require 'socket'
+require 'json'
 
 # fix for ruby's utterly braindead timeout handling
 # http://jerith.livejournal.com/40063.html
@@ -67,7 +68,7 @@ def send_message(x)
         begin
             # irc_cat doesn't seem to like persistent connections
             $socket = TCPSocket.new($options[:host], $options[:port])
-            $socket.puts(x)
+            $socket.puts("!!JSON"+{:data => x}.to_json)
             $socket.close
         end
     end
@@ -115,9 +116,33 @@ unless config['options'].nil? then
     options.merge!(config['options'])
 end
 
-# TODO add an option for OAuth
-httpauth = Twitter::HTTPAuth.new(config['email'], config['password'])
-twitter = Twitter::Base.new(httpauth)
+oauth = Twitter::OAuth.new(config['consumer_key'], config['consumer_secret'])
+# try and force OOB
+oauth.set_callback_url('oob');
+bits = YAML::load(open(ENV['HOME'] + '/.twittermoo.json'));
+unless (bits[:acc]) then # already authorised
+	r = oauth.request_token();
+	p r
+	p r.authorize_url;
+	puts "Enter the PIN:";
+	pin = $stdin.gets.chomp
+	puts "PIN IS [#{pin}]"
+	rat = r.get_access_token(:oauth_verifier => pin);
+	puts r.methods.sort.join(' ')
+	File.open(ENV['HOME'] + "/.twittermoo.json", "w") do |f|
+	    x = { :pin => pin, :req => r, :acc => rat }
+	    f.puts x.to_yaml
+	end
+    puts "FLANGE"
+    exit
+end
+
+puts "authing with " + [bits[:acc].token, bits[:acc].secret].join(' ')
+
+# hardcode these in the config because we run as one user
+oauth.authorize_from_access(bits[:acc].token, bits[:acc].secret)
+
+twitter = Twitter::Base.new(oauth)
 
 already_seen = GDBM.new($options[:dbfile])
 
