@@ -5,6 +5,10 @@ require 'sha1'
 require 'optparse'
 require 'socket'
 require 'json'
+require 'haml'
+
+template = File.read('email.txt')
+engine = Haml::Engine.new(template)
 
 # fix for ruby's utterly braindead timeout handling
 # http://jerith.livejournal.com/40063.html
@@ -17,7 +21,7 @@ $options = {
     :verbose => nil,
     :once => nil,
     :wait => 20,
-    :period => 3600,
+    :period => 7200,
     :every => 300
 }
 
@@ -88,7 +92,7 @@ def fetch_timeline(twitter)
     attempts = 5
     loop do
         begin
-            tl = twitter.friends_timeline()
+            tl = twitter.home_timeline(:count => 20)
             log "Y timeline fetched successfully, #{tl.size} items"
             return tl
         rescue Timeout::Error
@@ -120,7 +124,7 @@ oauth = Twitter::OAuth.new(config['consumer_key'], config['consumer_secret'])
 # try and force OOB
 oauth.set_callback_url('oob');
 bits = YAML::load(open(ENV['HOME'] + '/.twittermoo.json'));
-unless (bits[:acc]) then # already authorised
+if (bits.nil? or bits[:acc].nil?) then # already authorised
 	r = oauth.request_token();
 	p r
 	p r.authorize_url;
@@ -130,14 +134,13 @@ unless (bits[:acc]) then # already authorised
 	rat = r.get_access_token(:oauth_verifier => pin);
 	puts r.methods.sort.join(' ')
 	File.open(ENV['HOME'] + "/.twittermoo.json", "w") do |f|
-	    x = { :pin => pin, :req => r, :acc => rat }
-	    f.puts x.to_yaml
+	    bits = { :pin => pin, :req => r, :acc => rat }
+	    f.puts bits.to_yaml
 	end
-    puts "FLANGE"
-    exit
+    puts "Continuing with new authentication tokens"
 end
 
-puts "authing with " + [bits[:acc].token, bits[:acc].secret].join(' ')
+log "authing with " + [bits[:acc].token, bits[:acc].secret].join(' ')
 
 # hardcode these in the config because we run as one user
 oauth.authorize_from_access(bits[:acc].token, bits[:acc].secret)
@@ -187,35 +190,29 @@ loop {
     tl = fetch_timeline(twitter)
     log "Y timeline fetched successfully, #{tl.size} items"
 
+# FIXME need to check if we have a gap between this fetch and the previous
+
+    posts = []
+
     tl.reverse.each do |s|
         sha1 = SHA1.hexdigest(s.text + s.user.name)
+        dopp = SHA1.hexdigest(s.user.screen_name)
+
+r = (128 + (dopp[0..1].hex)/2).to_s(16)
+g = (128 + (dopp[2..3].hex)/2).to_s(16)
+b = (128 + (dopp[4..5].hex)/2).to_s(16)
+
+        dopp = r+g+b
+
         status = already_seen[sha1]
         if status.nil? then
             log "N +/#{sha1} #{s.user.name} #{s.text[0..6]}..."
             ts = Time.parse(s.created_at)
-            output = "<#{s.user.screen_name}> #{s.text} (#{ts.strftime('%Y%m%d %H%M%S')})"
-            if s.text =~ /^@(\w+)\s/ then
-                log "? #{$1}"
-                if 1 then # twitter.friends.include?($1) then
-                    log "+ #{output}"
-	                if output.length > 250 then
-	                    $stderr.puts "#{output[0..250]}..."
-	                    exit;
-	                end
-                    send_message(output)
-                else
-                    log "- #{output}"
-                end
-            else
-                log "+ #{output}"
-                if output.length > 250 then
-                    $stderr.puts "#{output[0..250]}..."
-                    exit;
-                end
-                send_message(output)
-            end
+            s.created_at = ts
+            s.text.gsub!(/@(\w+)/) {|i| "<a href='http://twitter.com/#{$1}/'>@#{$1}</a>"}
+            s.dopp = dopp
+            posts.push s
             already_seen[sha1] = "p"
-            sleep $options[:wait]
         else
             if status != 'p' then
                 log "O #{status}/#{sha1} #{s.user.name} #{s.text[0..6]}..."
@@ -223,6 +220,15 @@ loop {
             already_seen[sha1]='p'
         end
     end
+
+	File.open(ENV['HOME'] + "/.twittermoo.last", "w") do |f|
+        f.puts posts.inspect
+    end
+
+    puts engine.render(Object.new, {
+        :boundary => "kjhkjfdshkjhkjh23khekjhskjdhfjd",
+        :posts => posts
+    })
 
     if $options[:once].nil? then
         log "S #{Time.now}"
