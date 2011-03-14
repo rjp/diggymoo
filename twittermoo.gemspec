@@ -11,5 +11,8 @@ spec = Gem::Specification.new do |s|
   s.test_files = []
   s.has_rdoc = false
   s.add_dependency('twitter', '>= 0.5')
+  s.add_dependency('haml', '>= 0.0')
+  s.add_dependency('gdbm', '>= 0.0')
+  s.add_dependency('optparse', '>= 0.0')
 end
 
