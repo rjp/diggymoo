@@ -14,15 +14,12 @@ engine = Haml::Engine.new(template)
 # http://jerith.livejournal.com/40063.html
 
 $options = {
-    :host => 'localhost',
-    :port => nil,
+    :once => true,
     :dbfile => ENV['HOME'] + '/.twittermoo.db',
     :config => ENV['HOME'] + '/.twittermoo',
     :verbose => nil,
-    :once => nil,
-    :wait => 20,
-    :period => 7200,
-    :every => 300
+    :max => 100,    # the maximum number to look back
+    :page => 20    # how many to fetch at a time
 }
 
 OptionParser.new do |opts|
@@ -32,51 +29,22 @@ OptionParser.new do |opts|
     $options[:verbose] = v
   end
 
-  opts.on("-o", "--once", "Run once and quit") do |p|
-    $options[:once] = p
+  opts.on("-m", "--max N", Integer, "Maximum number of tweets to consider") do |p|
+    $options[:max] = p
   end
 
-  opts.on("-w", "--wait N", Integer, "Delay between sending messages (seconds)") do |p|
-    $options[:wait] = p
-  end
-
-  opts.on("-p", "--period N", Integer, "Time period to check for new messages (seconds)") do |p|
-    $options[:period] = p
-  end
-
-  opts.on("-e", "--every N", Integer, "Time period to sleep between checks (seconds, 300+)") do |p|
-    $options[:every] = p
-  end
-
-  opts.on("-p", "--port N", Integer, "irccat port") do |p|
-    $options[:port] = p
+  opts.on("-p", "--page N", Integer, "How many tweets to check at once") do |p|
+    $options[:page] = p
   end
 
   opts.on("-d", "--dbfile DBFILE", String, "dbfile") do |p|
     $options[:dbfile] = p
   end
 
-  opts.on("-h", "--host HOST", String, "host") do |p|
-    $options[:host] = p
-  end
-
   opts.on("-c", "--config CONFIG", String, "config file") do |p|
     $options[:config] = p
   end
 end.parse!
-
-def send_message(x)
-    if $options[:port].nil? then
-        puts "! #{x}"
-    else
-        begin
-            # irc_cat doesn't seem to like persistent connections
-            $socket = TCPSocket.new($options[:host], $options[:port])
-            $socket.puts("!!JSON"+{:data => x}.to_json)
-            $socket.close
-        end
-    end
-end
 
 # TODO move this to something like log4r if they have it
 def log(x)
@@ -85,15 +53,51 @@ def log(x)
     end
 end
 
+def dopp_colour(name)
+    dopp = SHA1.hexdigest(name)
+	r = (128 + (dopp[0..1].hex)/2).to_s(16)
+	g = (128 + (dopp[2..3].hex)/2).to_s(16)
+	b = (128 + (dopp[4..5].hex)/2).to_s(16)
+    return [r,g,b].join()
+end
+
+# have we seen this twit before?
+def seen(twit)
+    if $already_seen.nil? then
+        $already_seen = GDBM.new($options[:dbfile])
+    end
+    return $already_seen[twit.id.to_s(16)]
+end
+
+def update_seen(twit)
+    if $already_seen.nil? then
+        $already_seen = GDBM.new($options[:dbfile])
+    end
+    $already_seen[twit.id.to_s(16)] = 'p'
+end
+
 # this is very lame
-def fetch_timeline(twitter)
+def fetch_timeline(twitter, perpage, max)
     log "T fetching current timeline"
+    fetched = 0
+    page = 0
     tl = []
     attempts = 5
     loop do
         begin
-            tl = twitter.home_timeline(:count => 20)
-            log "Y timeline fetched successfully, #{tl.size} items"
+            while fetched < max do
+                log "T fetching #{perpage}, page #{page}"
+                pl = twitter.home_timeline(:count => perpage, :page => page)
+                oldest = pl[-1]
+                tl.push(*pl)
+                if seen(oldest) then
+                    log "Y timeline fetched successfully, #{tl.size} items"
+                    return tl # we've overlapped, return
+                end
+                fetched = fetched + perpage
+                page = page + 1
+            end
+            log "Y timeline didn't overlap after #{max}"
             return tl
         rescue Timeout::Error
             log "E $!"
@@ -126,13 +130,12 @@ oauth.set_callback_url('oob');
 bits = YAML::load(open(ENV['HOME'] + '/.twittermoo.json'));
 if (bits.nil? or bits[:acc].nil?) then # already authorised
 	r = oauth.request_token();
-	p r
+    puts "You have no auth tokens, please visit this URL for your PIN:"
 	p r.authorize_url;
 	puts "Enter the PIN:";
 	pin = $stdin.gets.chomp
 	puts "PIN IS [#{pin}]"
 	rat = r.get_access_token(:oauth_verifier => pin);
-	puts r.methods.sort.join(' ')
 	File.open(ENV['HOME'] + "/.twittermoo.json", "w") do |f|
 	    bits = { :pin => pin, :req => r, :acc => rat }
 	    f.puts bits.to_yaml
@@ -147,26 +150,9 @@ oauth.authorize_from_access(bits[:acc].token, bits[:acc].secret)
 
 twitter = Twitter::Base.new(oauth)
 
-already_seen = GDBM.new($options[:dbfile])
-
-if $options[:once].nil? then
-	log "B fetching current timeline and ignoring"
-    tl = fetch_timeline(twitter)
-    log "Y timeline fetched successfully, #{tl.size} items"
-	tl.each do |s|
-	    sha1 = SHA1.hexdigest(s.text + s.user.name)
-	    xtime = Time.parse(s.created_at)
-	    threshold = Time.now - $options[:period]
-	    if xtime < threshold then
-	        already_seen[sha1] = "s"
-	    end
-    end
-end
-
-prev_time = Time.now - $options[:period]
 log "L entering main loop"
 loop {
-
+if false then
     log "T fetching direct messages since #{prev_time}"
 
     begin
@@ -186,8 +172,9 @@ loop {
         sleep 15
         retry
     end
+end
 
-    tl = fetch_timeline(twitter)
+    tl = fetch_timeline(twitter, $options[:page], $options[:max])
     log "Y timeline fetched successfully, #{tl.size} items"
 
 # FIXME need to check if we have a gap between this fetch and the previous
@@ -195,29 +182,22 @@ loop {
     posts = []
 
     tl.reverse.each do |s|
-        sha1 = SHA1.hexdigest(s.text + s.user.name)
-        dopp = SHA1.hexdigest(s.user.screen_name)
-
-r = (128 + (dopp[0..1].hex)/2).to_s(16)
-g = (128 + (dopp[2..3].hex)/2).to_s(16)
-b = (128 + (dopp[4..5].hex)/2).to_s(16)
-
-        dopp = r+g+b
-
-        status = already_seen[sha1]
+        status = seen(s)
         if status.nil? then
-            log "N +/#{sha1} #{s.user.name} #{s.text[0..6]}..."
+            log "N +/#{s.id} #{s.user.name} #{s.text[0..6]}..."
             ts = Time.parse(s.created_at)
             s.created_at = ts
+# convert @mentions into links to twitter pages
             s.text.gsub!(/@(\w+)/) {|i| "<a href='http://twitter.com/#{$1}/'>@#{$1}</a>"}
-            s.dopp = dopp
+# provide a dopplr-like colour for highlighting
+            s.dopp = dopp_colour(s.user.screen_name)
             posts.push s
-            already_seen[sha1] = "p"
+            update_seen(s)
         else
             if status != 'p' then
-                log "O #{status}/#{sha1} #{s.user.name} #{s.text[0..6]}..."
+                log "O #{status}/#{s.id} #{s.user.name} #{s.text[0..6]}..."
             end
-            already_seen[sha1]='p'
+            update_seen(s)
         end
     end
 
@@ -237,3 +217,4 @@ b = (128 + (dopp[4..5].hex)/2).to_s(16)
         break
     end
 }
+
