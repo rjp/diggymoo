@@ -26,7 +26,7 @@ Content-Type: multipart/alternative; boundary=#{boundary}
             %div{:style=>"width:100%;padding:4pt 4pt 0pt 4pt;background:#cef;color:#000;position:relative;"}
               %div{:style=>"float:right;align:right;background:##{s.dopp};padding: 4pt 4pt 3pt 4pt;"}
                 %img{:src=>"#{s.user.profile_image_url}",:width=>36,:height=>36}
-              %div{:style=>"margin-top:-1em;padding:0pt 2pt 4pt 2pt;"}
+              %div{:style=>"padding:0pt 2pt 4pt 2pt;"}
                 %span{:style=>"font-size:75%"}
                   - if (s.favorited == true)
                     FAVRIT &bull;
@@ -40,9 +40,9 @@ Content-Type: multipart/alternative; boundary=#{boundary}
                   %a{:href=>"http://twitter.com/#{s.user.screen_name}/"}
                     #{s.user.name} (#{s.user.screen_name})
                   - if (s.in_reply_to_screen_name != nil)
-                    %a{:href=>"http://twitter.com/#{s.in_reply_to_screen_name}/"}
-                      &raquo; #{s.in_reply_to_screen_name}
-                  &raquo; #{s.dopp}
+                    &raquo;
+                    %a{:href=>"http://twitter.com/#{s.in_reply_to_screen_name}/status/#{s.in_reply_to_status_id}"}
+                      #{s.in_reply_to_screen_name}
                 %br
                 %span{:style=>"padding:18pt"}
                   &nbsp;
