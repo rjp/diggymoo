@@ -1,19 +1,12 @@
+#! /usr/bin/env ruby
+require 'rubygems'
 require 'diggymoo'
 require 'haml'
+require 'mash'
 
-template = File.read('email.txt')
+path_to_email = File.expand_path(File.dirname(__FILE__) + "/../email.txt")
+template = File.read(path_to_email)
 engine = Haml::Engine.new(template)
-
-class ObjectHash
-    attr_accessor :hash
-    def method_missing(sym)
-        return @hash[sym.to_s]
-    end
-    def initialize(h)
-        @hash = h
-        return self
-    end
-end
 
 # fix for ruby's utterly braindead timeout handling
 # http://jerith.livejournal.com/40063.html
@@ -26,16 +19,20 @@ def dopp_colour(name)
     return [r,g,b].join()
 end
 
-queue = $redis.get(dbkey('curqueue')) || 0
-$redis.incr(dbkey('curqueue'))
+queue = nil
+unless $options[:queue].nil? then
+    queue = $options[:queue]
+else
+	queue = $redis.get(dbkey('curqueue')) || 0
+	$redis.incr(dbkey('curqueue'))
+end
 post_list = $redis.smembers(dbkey('q:'+queue.to_s))
 
 posts = []
 post_list.each do |post_id|
     o = $redis.hgetall(dbkey('twit:'+post_id.to_s))
     o['dopp'] = dopp_colour(o['from_screen'])
-    h = ObjectHash.new(o)
-    posts.push h
+    posts.push o.to_mash
 end
 
 # TODO only send out N twips at a time?
