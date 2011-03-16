@@ -6,6 +6,7 @@ require 'optparse'
 require 'socket'
 require 'json'
 require 'haml'
+require 'sqlite3'
 
 template = File.read('email.txt')
 engine = Haml::Engine.new(template)
@@ -15,11 +16,11 @@ engine = Haml::Engine.new(template)
 
 $options = {
     :once => true,
-    :dbfile => ENV['HOME'] + '/.twittermoo.db',
+    :dbfile => ENV['HOME'] + '/.twittermoo.sqlite',
     :config => ENV['HOME'] + '/.twittermoo',
     :verbose => nil,
     :max => 100,    # the maximum number to look back
-    :page => 20    # how many to fetch at a time
+    :page => 20     # how many to fetch at a time
 }
 
 OptionParser.new do |opts|
@@ -123,6 +124,9 @@ config = YAML::load(open($options[:config]))
 unless config['options'].nil? then
     options.merge!(config['options'])
 end
+
+db = SQLite3::Database.new(dbfile)
+db.execute("CREATE TABLE twits (id INTEGER, t_created TIMESTAMP, s_from VARCHAR(25), s_to VARCHAR(25), r_from VARCHAR(128), i_reply INTEGER, u_image VARCHAR(512), f_favourite BOOLEAN, f_protected BOOLEAN, s_content TEXT)");
 
 oauth = Twitter::OAuth.new(config['consumer_key'], config['consumer_secret'])
 # try and force OOB
