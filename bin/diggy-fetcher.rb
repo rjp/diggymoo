@@ -1,3 +1,5 @@
+#! /usr/bin/env ruby
+require 'rubygems'
 require 'diggymoo'
 
 # TODO move this to something like log4r if they have it
