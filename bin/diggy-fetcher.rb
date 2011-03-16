@@ -69,8 +69,14 @@ end
 oauth = Twitter::OAuth.new(config['consumer_key'], config['consumer_secret'])
 # try and force OOB
 oauth.set_callback_url('oob');
-bits = YAML::load(open(ENV['HOME'] + '/.diggymoo.json'));
-if (bits.nil? or bits[:acc].nil?) then # already authorised
+bits = {}
+begin
+    bits = YAML::load(open(ENV['HOME'] + '/.diggymoo.json'));
+rescue
+    puts $!
+end
+
+if (bits.nil? or bits[:acc].nil?) then # no auth tokens
 	r = oauth.request_token();
     puts "You have no auth tokens, please visit this URL for your PIN:"
 	p r.authorize_url;
