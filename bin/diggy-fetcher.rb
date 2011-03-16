@@ -108,6 +108,10 @@ log "L entering main loop"
             s.created_at = ts
 # convert @mentions into links to twitter pages
             s.text.gsub!(/@(\w+)/) {|i| "<a href='http://twitter.com/#{$1}/'>@#{$1}</a>"}
+# bizarreness happening in Ruby 1.8.6 with weird unicode encodings for <>
+            s.source.gsub!(/\\\u003C/, '<')
+            s.source.gsub!(/\\\u003E/, '>')
+
             j = {
                 :status_id => s.id, :when => s.created_at, :favorited => s.favorited, 
                 :protected => s.protected, :from_screen => s.user.screen_name, 
