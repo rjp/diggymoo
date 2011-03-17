@@ -10,7 +10,7 @@ Content-Type: multipart/alternative; boundary=#{boundary}
   #{posts.length} new twips
   --#{boundary}
   Content-Type: text/html; charset=UTF-8
-
+~ "\n"
 !!! default
 %html
   %head
