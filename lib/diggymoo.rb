@@ -6,12 +6,21 @@ require 'optparse'
 require 'socket'
 require 'json'
 require 'redis'
+require 'etc'
+
+# try to make a prefix based on our user name/id
+myusername = ENV['USER'] || Etc.getlogin || '#'<<Process.uid
+
+if myusername.nil? then
+    $stderr.puts "Cannot find who you are, cannot continue!"
+    exit 1
+end
 
 $options = {
     :once => true,
-    :dbfile => ENV['USER'] + ':diggymoo',
+    :dbfile => myusername + ':diggymoo',
     :config => ENV['HOME'] + '/.diggymoo',
-    :email => ENV['USER'] + '@browser.org', # hopefully a safe default
+    :email => myusername + '@browser.org', # hopefully a safe default
     :verbose => nil,
     :queue => nil,
     :max => 100,    # the maximum number to look back
