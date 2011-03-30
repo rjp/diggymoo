@@ -10,7 +10,7 @@ require 'redis'
 $options = {
     :once => true,
     :dbfile => ENV['USER'] + ':diggymoo',
-    :config => ENV['HOME'] + '/.twittermoo',
+    :config => ENV['HOME'] + '/.diggymoo',
     :email => ENV['USER'] + '@browser.org', # hopefully a safe default
     :verbose => nil,
     :queue => nil,
@@ -19,7 +19,7 @@ $options = {
 }
 
 OptionParser.new do |opts|
-  opts.banner = "Usage: twittermoo.rb [-v] [-p port] [-h host] [-d dbfile] [-c config] [-o] [-w N] [-p N] [-e N]"
+  opts.banner = "Usage: diggymoo.rb [-v] [-p port] [-h host] [-d dbfile] [-c config] [-o] [-w N] [-p N] [-e N]"
 
   opts.on("-v", "--[no-]verbose", "Run verbosely") do |v|
     $options[:verbose] = v
