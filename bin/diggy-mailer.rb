@@ -32,6 +32,9 @@ posts = []
 post_list.each do |post_id|
     o = $redis.hgetall(dbkey('twit:'+post_id.to_s))
     o['dopp'] = dopp_colour(o['from_screen'])
+    URI.extract(o['text'].gsub(/href='http:/,"XX!!XX"), ['http','https']).each do |url|
+        o['text'].gsub!(url, "<a href='#{url}'>#{url}</a>")
+    end
     posts.push o.to_mash
 end
 
