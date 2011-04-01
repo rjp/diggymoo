@@ -9,7 +9,7 @@ require 'redis'
 require 'etc'
 
 # try to make a prefix based on our user name/id
-myusername = ENV['USER'] || Etc.getlogin || '#'<<Process.uid.to_s
+myusername = ENV['USER'] || Etc.getpwuid.name || '#'<<Process.uid.to_s
 
 if myusername.nil? then
     $stderr.puts "Cannot find who you are, cannot continue!"
