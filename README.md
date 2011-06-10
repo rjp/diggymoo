@@ -32,3 +32,25 @@ into Redis for storing.
 diggy-mailer.rb retrieves queued tweets from Redis and bundles them into
 a HTML email which can be passed directly to `sendmail -t`. The destination
 email address is specified as the --email option (defaults to `$USER@browser.org`.
+
+Options
+=======
+    -v|--verbose            report what we're doing as we go
+    -l|--list LIST          a Twitter list to process instead of our timeline
+    -q|--queue N            which queue to process
+    -m|--max N              maximum number of tweets to process in one pass
+    -p|--page N             how many tweets to fetch in one API call
+    -d|--dbfile DBFILE      additional namespacing for our database storage
+    -c|--config CONFIG      location of a configuration file
+    -e|--email EMAIL        where to send the formatted tweets
+
+Examples
+========
+To fetch your home timeline, 20 tweets at a time, up to 100 tweets:
+
+    diggy-fetcher.rb
+
+To fetch a specific list into a seperate queue from your home timeline:
+
+    diggy-fetcher.rb -l comedians -d comqueue
+

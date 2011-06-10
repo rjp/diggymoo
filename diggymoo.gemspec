@@ -1,6 +1,6 @@
 spec = Gem::Specification.new do |s| 
   s.name = "diggymoo"
-  s.version = "0.2.4"
+  s.version = "0.3.0"
   s.author = "Rob Partington"
   s.email = "zimpenfish@gmail.com"
   s.homepage = "http://rjp.github.com/diggymoo"
