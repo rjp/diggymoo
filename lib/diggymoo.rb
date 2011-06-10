@@ -37,7 +37,7 @@ OptionParser.new do |opts|
     $options[:verbose] = v
   end
 
-  opts.on("-l", "--list", String, "Twitter List") do |v|
+  opts.on("-l", "--list LIST", String, "Twitter List") do |v|
     $options[:list] = v
   end
 
