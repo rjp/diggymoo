@@ -20,60 +20,27 @@ def update_seen(twit)
     $redis.sadd(dbkey('seen'), twit.id)
 end
 
-# this is 99% identical to fetch_timeline
-# FIXME refactor the meat and pass a method for the actual fetch
-def fetch_list_timeline(twitter, list, perpage, max)
+def fetch_statuses(twitter, perpage, max, list=nil, screenname=nil)
     log "T fetching current timeline"
     fetched = 0
     page = 1
     tl = []
     attempts = 5
-    loop do
-        begin
-            while fetched < max do
-                log "T fetching #{perpage}, page #{page}"
-                pl = twitter.list_timeline(list)
-                oldest = pl[-1]
-                tl.push(*pl)
-                if seen(oldest) then
-                    log "Y timeline fetched successfully, #{tl.size} items"
-                    return tl # we've overlapped, return
-                end
-                fetched = fetched + perpage
-                page = page + 1
-            end
-            log "Y timeline didn't overlap after #{max}"
-            return tl
-        rescue Timeout::Error
-            log "E $!"
-            attempts = attempts - 1
-            if attempts == 0 then
-                log "too many failures, bailing for 120s"
-                sleep 120
-                attempts = 5
-            else
-                log "transient failure, sleeping for 30s"
-                sleep 30
-            end
-        rescue
-            raise $!
-            sleep 10
-        end
-    end
-end
 
-# this is very lame
-def fetch_timeline(twitter, perpage, max)
-    log "T fetching current timeline"
-    fetched = 0
-    page = 1
-    tl = []
-    attempts = 5
+    fetcher = Proc.new {
+        return twitter.home_timeline(:count => perpage, :page => page)
+    }
+    if not list.nil? then
+	    fetcher = Proc.new {
+	        return twitter.list_timeline(screenname, list, :count => perpage, :page => page)
+	    }
+    end
+
     loop do
         begin
             while fetched < max do
                 log "T fetching #{perpage}, page #{page}"
-                pl = twitter.home_timeline(:count => perpage, :page => page)
+                pl = fetcher.call()
                 oldest = pl[-1]
                 tl.push(*pl)
                 if seen(oldest) then
@@ -150,15 +117,9 @@ rescue => e
 end
 screen_name = user.screen_name
 
-fetcher = Proc.new{ fetch_timeline(twitter, $options[:page], $options[:max]) }
-if not $options[:list].nil? then
-    fetcher = Proc.new{ fetch_list_timeline(twitter, $options[:list], $options[:page], $options[:max]) }
-    log "O fetching list #{$options[:list]} for user"
-end
-
-
+log "O list option is #{$options[:list]}"
 log "L entering main loop"
-    tl = fetcher.call()
+    tl = fetch_statuses(twitter, $options[:page], $options[:max], $options[:list], screen_name)
     log "Y timeline fetched successfully, #{tl.size} items"
 
 # FIXME need to check if we have a gap between this fetch and the previous
