@@ -18,6 +18,48 @@ def update_seen(twit)
     $redis.sadd(dbkey('seen'), twit.id)
 end
 
+# this is 99% identical to fetch_timeline
+# FIXME refactor the meat and pass a method for the actual fetch
+def fetch_list_timeline(twitter, perpage, max)
+    log "T fetching current timeline"
+    fetched = 0
+    page = 1
+    tl = []
+    attempts = 5
+    loop do
+        begin
+            while fetched < max do
+                log "T fetching #{perpage}, page #{page}"
+                pl = Twitter.list_timeline('zimpenfish', 'ua', :count => perpage, :page => page)
+                oldest = pl[-1]
+                tl.push(*pl)
+                if seen(oldest) then
+                    log "Y timeline fetched successfully, #{tl.size} items"
+                    return tl # we've overlapped, return
+                end
+                fetched = fetched + perpage
+                page = page + 1
+            end
+            log "Y timeline didn't overlap after #{max}"
+            return tl
+        rescue Timeout::Error
+            log "E $!"
+            attempts = attempts - 1
+            if attempts == 0 then
+                log "too many failures, bailing for 120s"
+                sleep 120
+                attempts = 5
+            else
+                log "transient failure, sleeping for 30s"
+                sleep 30
+            end
+        rescue
+            raise $!
+            sleep 10
+        end
+    end
+end
+
 # this is very lame
 def fetch_timeline(twitter, perpage, max)
     log "T fetching current timeline"
@@ -99,7 +141,7 @@ oauth.authorize_from_access(bits[:acc].token, bits[:acc].secret)
 twitter = Twitter::Base.new(oauth)
 
 log "L entering main loop"
-    tl = fetch_timeline(twitter, $options[:page], $options[:max])
+    tl = fetch_list_timeline(twitter, $options[:page], $options[:max])
     log "Y timeline fetched successfully, #{tl.size} items"
 
 # FIXME need to check if we have a gap between this fetch and the previous
