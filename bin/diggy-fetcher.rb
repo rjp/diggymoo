@@ -2,6 +2,8 @@
 require 'rubygems'
 require 'diggymoo'
 
+screen_name = ''
+
 # TODO move this to something like log4r if they have it
 def log(x)
     if $options[:verbose] then
@@ -20,7 +22,7 @@ end
 
 # this is 99% identical to fetch_timeline
 # FIXME refactor the meat and pass a method for the actual fetch
-def fetch_list_timeline(twitter, perpage, max)
+def fetch_list_timeline(twitter, list, perpage, max)
     log "T fetching current timeline"
     fetched = 0
     page = 1
@@ -30,7 +32,7 @@ def fetch_list_timeline(twitter, perpage, max)
         begin
             while fetched < max do
                 log "T fetching #{perpage}, page #{page}"
-                pl = Twitter.list_timeline('zimpenfish', 'ua', :count => perpage, :page => page)
+                pl = twitter.list_timeline(list)
                 oldest = pl[-1]
                 tl.push(*pl)
                 if seen(oldest) then
@@ -140,8 +142,23 @@ oauth.authorize_from_access(bits[:acc].token, bits[:acc].secret)
 
 twitter = Twitter::Base.new(oauth)
 
+begin
+    user = twitter.verify_credentials()
+rescue => e
+    puts "Unauthorized?"
+    exit
+end
+screen_name = user.screen_name
+
+fetcher = Proc.new{ fetch_timeline(twitter, $options[:page], $options[:max]) }
+if not $options[:list].nil? then
+    fetcher = Proc.new{ fetch_list_timeline(twitter, $options[:list], $options[:page], $options[:max]) }
+    log "O fetching list #{$options[:list]} for user"
+end
+
+
 log "L entering main loop"
-    tl = fetch_list_timeline(twitter, $options[:page], $options[:max])
+    tl = fetcher.call()
     log "Y timeline fetched successfully, #{tl.size} items"
 
 # FIXME need to check if we have a gap between this fetch and the previous
