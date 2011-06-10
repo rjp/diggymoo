@@ -18,20 +18,27 @@ end
 
 $options = {
     :once => true,
-    :dbfile => myusername + ':diggymoo',
+    :dbfile => nil,
     :config => ENV['HOME'] + '/.diggymoo',
     :email => myusername + '@browser.org', # hopefully a safe default
+    :user => myusername,
     :verbose => nil,
     :queue => nil,
+    :list => nil,
     :max => 100,    # the maximum number to look back
     :page => 20     # how many to fetch at a time
+
 }
 
 OptionParser.new do |opts|
-  opts.banner = "Usage: diggymoo.rb [-v] [-p port] [-h host] [-d dbfile] [-c config] [-o] [-w N] [-p N] [-e N]"
+  opts.banner = "Usage: diggymoo.rb [-v] [-l list] [-d dbkey] [-c config] [-o] [-w N] [-p N] [-e N]"
 
   opts.on("-v", "--[no-]verbose", "Run verbosely") do |v|
     $options[:verbose] = v
+  end
+
+  opts.on("-l", "--list", String, "Twitter List") do |v|
+    $options[:list] = v
   end
 
   opts.on("-m", "--max N", Integer, "Maximum number of tweets to consider") do |p|
@@ -76,7 +83,8 @@ unless config['options'].nil? then
 end
 
 def dbkey(x)
-    return $options[:dbfile] + ":#{x}"
+    key = [$options[:user], 'diggymoo', $options[:dbfile], x].compact.join(':')
+    return key
 end
 
 $redis = Redis.new
